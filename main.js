@@ -3,12 +3,15 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DragControls } from 'three/addons/controls/DragControls.js';
 
+
 let scene, camera, renderer, mixer, clock, controls;
 // Physics variables
 const mapMeshes = [];
 const cars = []; // Global cars array
 const raycaster = new THREE.Raycaster();
 const gravity = 20.0; 
+const cameraRaycaster = new THREE.Raycaster();
+const cameraCollisionObjects = [];
 
 // --- Path Editor Variables ---
 let isEditorEnabled = false;
@@ -57,7 +60,7 @@ function init() {
     scene.background = new THREE.Color(0xa0a0a0); // Grey sky (change if you want)
     scene.fog = new THREE.Fog(0xa0a0a0, 10, 500); // Fog to hide the edge of the world
 
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.05, 1000);
     camera.position.set(0, 20, 50); // Start position (Up and Back)
 
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
@@ -93,13 +96,13 @@ function toggleDayNight() {
     if (isNight) {
         // Night Mode
         hemiLight.color.setHex(0x080820); // Dark Blue
-        hemiLight.groundColor.setHex(0x000000); // Black ground
-        hemiLight.intensity = 0.3; // Increased from 0.1 for visibility
+        hemiLight.groundColor.setHex(0x000000);
+        hemiLight.intensity = 0.3;
         
         // MOONLIGHT (Faint Directional Light)
-        dirLight.intensity = 0.2; 
-        dirLight.color.setHex(0xaaccff); // Cool blue moon
-        dirLight.castShadow = true; // Optional: shadows at night? User might like it.
+        dirLight.intensity = 0.5; 
+        dirLight.color.setHex(0xaaccff);
+        dirLight.castShadow = true;
         
         scene.background = new THREE.Color(0x050510); // Slightly lighter black
         scene.fog = new THREE.FogExp2(0x050510, 0.002);
@@ -687,7 +690,28 @@ function animate() {
                 
                 const relativeOffset = new THREE.Vector3(offsetX, offsetY, offsetZ);
                 const cameraOffset = relativeOffset.applyMatrix4(car.matrixWorld);
-                camera.position.lerp(cameraOffset, 0.1);
+                const rayOrigin = car.position.clone().add(new THREE.Vector3(0, 2, 0)); 
+                const rayDirection = cameraOffset.clone().sub(rayOrigin).normalize();
+                const maxRayDist = rayOrigin.distanceTo(cameraOffset);
+
+                cameraRaycaster.set(rayOrigin, rayDirection);
+
+                // 2. Identify targets (Exclude the car we are following to prevent self-collision)
+                const collisionTargets = [...mapMeshes, ...cars.filter((c, i) => i !== targetCarIndex)];
+                const intersects = cameraRaycaster.intersectObjects(collisionTargets, true);
+
+                if (intersects.length > 0 && intersects[0].distance < maxRayDist) {
+                    // 3. Collision hit! 
+                    // We move the camera to the hit point, but keep it at least 2 units away from the car
+                    const hitPoint = intersects[0].point;
+                    const safeDistance = Math.max(intersects[0].distance - 0.5, 2.0); 
+                    
+                    const finalPos = rayOrigin.clone().add(rayDirection.clone().multiplyScalar(safeDistance));
+                    camera.position.lerp(finalPos, 0.2);
+                } else {
+                    // 4. No collision
+                    camera.position.lerp(cameraOffset, 0.1);
+                }
                 camera.lookAt(car.position);
                 
                 // Apply roll rotation around the camera's forward (Z) axis
@@ -695,11 +719,20 @@ function animate() {
             }
         }
     }
+    const camRaycaster = new THREE.Raycaster();
+    const camRayOrigin = camera.position.clone();
+    camRayOrigin.y += 10; // Start ray from above the camera
+    camRaycaster.set(camRayOrigin, new THREE.Vector3(0, -1, 0));
 
+    const camIntersects = camRaycaster.intersectObjects(mapMeshes, true);
+    if (camIntersects.length > 0) {
+        const groundY = camIntersects[0].point.y;
+        const minHeight = 1.5; // Minimum distance from camera to ground
 
-
-
-
+        if (camera.position.y < groundY + minHeight) {
+            camera.position.y = groundY + minHeight;
+        }
+    }
     renderer.render(scene, camera);
 }
 
