@@ -1,0 +1,29 @@
+{
+  "type": "RaceReplay",
+  "keyframes": [
+    {
+      "time": 0,
+      "cameraName": "Default Chase"
+    },
+    {
+      "time": 2.5023000000007274,
+      "cameraName": "front"
+    },
+    {
+      "time": 3.843450000001029,
+      "cameraName": "back"
+    },
+    {
+      "time": 7.344599999999341,
+      "cameraName": "front"
+    },
+    {
+      "time": 8.027650000000051,
+      "cameraName": "side"
+    },
+    {
+      "time": 9.038300000000543,
+      "cameraName": "Default Chase"
+    }
+  ]
+}

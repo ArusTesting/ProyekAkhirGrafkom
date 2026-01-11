@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Final Project - Racing Scene</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #ffffff; font-family: sans-serif; font-size: 24px; font-weight: bold;
+        }
+        #tracker {
+            position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 5px;
+            color: #fff; font-family: monospace; font-size: 16px;
+            background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 8px; pointer-events: none;
+        }
+        #editor-controls {
+            position: absolute; top: 10px; right: 10px;
+            display: flex; gap: 10px;
+        }
+        button {
+            padding: 8px 12px; font-size: 14px; cursor: pointer;
+            background: #333; color: white; border: 1px solid #555;
+        }
+        button:hover { background: #444; }
+        .active { background: #4CAF50; border-color: #4CAF50; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading">LOADING SCENE...</div>
+    <div id="tracker">X: 0 Y: 0 Z: 0</div>
+    
+    <div id="editor-controls">
+        <button id="btn-toggle-editor">Enable Editor</button>
+        <button id="btn-undo">Undo</button>
+        <button id="btn-redo">Redo</button>
+        <button id="btn-clear-path">Clear Path</button>
+        <button id="btn-close-loop" style="background: #9C27B0;">Close Loop</button>
+    </div>
+
+    <!-- New Path Manager Container -->
+    <div id="path-manager" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); width: 250px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; color: white; display: flex; flex-direction: column; gap: 10px;">
+        <h3 style="margin: 0; text-align: center;">Path Manager</h3>
+        
+
+        <div id="path-list" style="border: 1px solid #444; height: 100px; overflow-y: auto; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 5px;">
+            <div style="color: #666; font-style: italic; text-align: center; padding-top: 20px;">No paths loaded</div>
+        </div>
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <button id="btn-save-path" style="flex: 1;">Save New</button>
+            <button id="btn-load-path" style="flex: 1;">Load File</button>
+        </div>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <button id="btn-edit-path" style="width: 100%; background: #009688;">Edit Selected</button>
+        </div>
+        <input type="file" id="file-input" style="display: none;" accept=".json" multiple>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 5px;">
+            <button id="btn-assign-ae86" style="background: rgba(0, 255, 255, 0.2); border: 1px solid #00ffff;">Assign AE86</button>
+            <button id="btn-assign-rx7" style="background: rgba(255, 165, 0, 0.2); border: 1px solid #ffa500;">Assign RX7</button>
+            <button id="btn-deassign-ae86" style="background: #333; border: 1px solid #555; font-size: 11px;">Clear AE86</button>
+            <button id="btn-deassign-rx7" style="background: #333; border: 1px solid #555; font-size: 11px;">Clear RX7</button>
+        </div>
+        
+        <hr style="border-color: #444; margin: 10px 0;">
+
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button id="btn-drive-ae86" style="background: rgba(0, 255, 255, 0.4); border: 1px solid #00ffff; color: black; font-weight: bold;">Drive AE86</button>
+            <button id="btn-drive-rx7" style="background: rgba(255, 165, 0, 0.4); border: 1px solid #ffa500; color: black; font-weight: bold;">Drive RX7</button>
+        </div>
+
+        <div style="display: flex; gap: 5px;">
+            <button id="btn-play-race" style="background: #e91e63; width: 60%;">START RACE</button>
+            <button id="btn-reset-race" style="background: #f44336; width: 40%;">RESET</button>
+        </div>
+        
+        <hr style="border-color: #444; margin: 10px 0;">
+        
+        <div style="font-size: 11px; color: #888; margin-bottom: 5px; text-align: center;">Race Settings</div>
+        <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px;">Max Speed: <span id="speed-value">40</span></label>
+            <input type="range" id="race-max-speed" min="10" max="100" value="40" style="width: 100%;">
+        </div>
+        <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px;">Acceleration: <span id="accel-value">10</span></label>
+            <input type="range" id="race-acceleration" min="5" max="30" value="10" style="width: 100%;">
+        </div>
+    </div>
+    
+    <!-- Hide UI Button -->
+    <button id="btn-hide-ui" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; z-index: 9999;">Hide UI (H)</button>
+
+    <!-- Environment Controls -->
+    <div id="env-controls" style="position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 10px; border-radius: 5px; font-family: sans-serif;">
+        <h3 style="margin-top: 0; margin-bottom: 5px; text-align: center;">Environment</h3>
+        <button id="btn-toggle-daynight" style="width: 100%; margin-bottom: 5px; background: #673AB7; border: 1px solid #7E57C2;">Toggle Day/Night</button>
+        <button id="btn-toggle-headlights" style="width: 100%; margin-bottom: 5px; background: #FFC107; color: black; border: 1px solid #FFD54F;">Toggle Headlights</button>
+        <div style="font-size: 12px; margin-top: 5px;">
+            <label><input type="checkbox" id="chk-shadows" checked> Shadows</label>
+        </div>
+    </div>
+
+    <!-- Camera Manager (Top Right) -->
+    <div id="camera-manager" style="
+        position: absolute; 
+        top: 150px; 
+        left: 10px; 
+        width: 220px; 
+        max-height: calc(100vh - 170px);
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.8); 
+        padding: 15px; 
+        border-radius: 8px; 
+        color: white; 
+        font-family: sans-serif;
+        display: none; /* Hidden by default, shown when driving */
+        z-index: 1000;
+    ">
+        <h3 style="margin-top: 0; margin-bottom: 10px; text-align: center;">Camera Manager</h3>
+        
+        <div id="camera-list" style="border: 1px solid #444; height: 80px; overflow-y: auto; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 5px;">
+            <!-- Cameras will be listed here -->
+        </div>
+
+        <input type="text" id="camera-name-input" placeholder="Camera Name" style="width: 100%; box-sizing: border-box; margin-bottom: 5px; padding: 5px; background: #333; border: 1px solid #555; color: white;">
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <button id="btn-save-camera" style="width: 100%; background: #4caf50;">Save Current View</button>
+        </div>
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+             <button id="btn-overwrite-camera" style="width: 100%; background: #ff9800; display: none;">Overwrite Selected</button>
+        </div>
+
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button id="btn-load-configs" style="flex: 1; background: #2196F3;">Load Configs</button>
+            <button id="btn-save-configs" style="flex: 1; background: #2196F3;">Save Configs</button>
+        </div>
+        <input type="file" id="file-input-configs" style="display: none;" accept=".json">
+
+        <hr style="border-color: #444; margin: 10px 0;">
+
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <button id="btn-record-camera" style="width: 100%; background: #e91e63;">Start Record</button>
+        </div>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <button id="btn-load-replay" style="width: 100%; background: #9c27b0;">Load Replay</button>
+        </div>
+        <input type="file" id="file-input-replay" style="display: none;" accept=".json">
+
+        <hr style="border-color: #444; margin: 10px 0;">
+        
+        <div id="chase-camera-controls">
+            <div style="font-size: 11px; color: #888; margin-bottom: 8px; text-align: center;">Chase Camera Offset</div>
+            <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px;">Pitch: <span id="pitch-value">0</span>°</label>
+                <input type="range" id="camera-pitch" min="-45" max="45" value="0" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px;">Yaw: <span id="yaw-value">0</span>°</label>
+                <input type="range" id="camera-yaw" min="-180" max="180" value="0" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px;">Roll: <span id="roll-value">0</span>°</label>
+                <input type="range" id="camera-roll" min="-45" max="45" value="0" style="width: 100%;">
+            </div>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <button id="btn-reset-camera-angles" style="width: 100%; background: #555; font-size: 12px;">Reset Angles</button>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 5px;">
+            <button id="btn-toggle-freecam" style="width: 100%; background: #607d8b;">Enable Free Cam</button>
+       </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
