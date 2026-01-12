@@ -98,7 +98,7 @@ function toggleDayNight() {
         hemiLight.intensity = 0.3; // Increased from 0.1 for visibility
         
         // MOONLIGHT (Faint Directional Light)
-        dirLight.intensity = 0.2; 
+        dirLight.intensity = 0.5; 
         dirLight.color.setHex(0xaaccff); // Cool blue moon
         dirLight.castShadow = true; // Optional: shadows at night? User might like it.
         
@@ -245,9 +245,6 @@ function toggleHeadlights() {
         // Fix Orientation: Model faces wrong way, so we wrap it in a group
         const carGroup = new THREE.Group();
         carGroup.add(model);
-        
-        // No rotation needed: User applied all transforms in Blender
-        // Model should already face -Z for translateZ movement
         
         // Adjust scale on MODEL and position on GROUP
         model.scale.set(0.025, 0.025, 0.025); 
