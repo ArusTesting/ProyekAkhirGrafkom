@@ -307,11 +307,11 @@ function toggleHeadlights() {
                 pivot: steerPivot
             };
             
-            steerPivot.add(new THREE.AxesHelper(30)); 
+            // steerPivot.add(new THREE.AxesHelper(30)); 
         });
         
         scene.add(carGroup);
-        carGroup.add(new THREE.AxesHelper(200)); 
+        // carGroup.add(new THREE.AxesHelper(200)); 
         
         // Define rotation axes configuration for this car
         carGroup.userData.rotationSettings = {
@@ -373,11 +373,11 @@ function toggleHeadlights() {
                 mesh: wheelObj,
                 pivot: steerPivot
             };
-             steerPivot.add(new THREE.AxesHelper(30));
+            //  steerPivot.add(new THREE.AxesHelper(30));
         });
 
         scene.add(car);
-        car.add(new THREE.AxesHelper(200)); 
+        // car.add(new THREE.AxesHelper(200)); 
         cars[1] = car; // RX7 is always index 1
         // RX7 (Scale 3.0): Adjusted based on user feedback
         // Desired World: x=0.75, y=0.66, z=-2.25
