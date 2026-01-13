@@ -453,30 +453,31 @@ function animate() {
              const state = data.raceState;
 
              if (data.curve && car) {
-                 // Physics-based movement
-                 // 1. Accelerate
-                 state.speed = Math.min(state.speed + raceConfig.acceleration * delta, raceConfig.maxSpeed);
+                // Physics-based movement
+                // 1. Accelerate
+                state.speed = Math.min(state.speed + raceConfig.acceleration * delta, raceConfig.maxSpeed);
                  
-                 // 2. Move (Distance = Speed * Time)
-                 state.distance += state.speed * delta;
+                // 2. Move (Distance = Speed * Time)
+                state.distance += state.speed * delta;
                  
                  // 3. Map distance to curve parameter t (0 to 1)
-                 const totalLength = data.curve.getLength();
-                 const t = (state.distance / totalLength) % 1.0;
+                const totalLength = data.curve.getLength();
+                const t = (state.distance / totalLength) % 1.0;
                  
-                 const pos = data.curve.getPointAt(t);
-                 car.position.copy(pos);
+                const pos = data.curve.getPointAt(t);
+                car.position.x = pos.x;
+                car.position.z = pos.z;
                  
                  // --- Drift Math ---
                  // Get tangent (direction of path)
-                 const tangent = data.curve.getTangentAt(t);
+                const tangent = data.curve.getTangentAt(t);
                  
                  // Calculate "curvature" by looking at difference in tangent
-                 const tAhead = Math.min(t + 0.02, 0.999);
-                 const tangentAhead = data.curve.getTangentAt(tAhead);
+                const tAhead = Math.min(t + 0.02, 0.999);
+                const tangentAhead = data.curve.getTangentAt(tAhead);
                  
                  // Cross product Y gives us which way we are turning
-                 const turnDir = tangent.x * tangentAhead.z - tangent.z * tangentAhead.x;
+                const turnDir = tangent.x * tangentAhead.z - tangent.z * tangentAhead.x;
                  
                 // Drift angle: oversteer based on turn intensity
                 // turnDir > 0 = turning left, < 0 = turning right
@@ -767,6 +768,11 @@ function startRace() {
     }
     isRacing = true;
     raceTime = 0;
+    waypoints.forEach(wp => wp.visible = false);
+    if (curveLine) curveLine.visible = false;
+    
+    if (assignedPaths.ae86.line) assignedPaths.ae86.line.visible = false;
+    if (assignedPaths.rx7.line) assignedPaths.rx7.line.visible = false;
     
     // Initialize Race State for each car
     ['ae86', 'rx7'].forEach(key => {
